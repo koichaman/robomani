@@ -1,0 +1,77 @@
+<launch>
+    <include file="$(find video_stream_opencv)/launch/camera.launch" >
+        <!-- node name and ros graph name -->
+        <arg name="camera_name" value="left" />
+        <!-- full path to the video file -->
+        <!-- wget http://techslides.com/demos/sample-videos/small.mp4 -O /tmp/small.mp4 -->
+        <arg name="video_stream_provider" value="/mnt/d/Unity/robomani_test/Recordings/left.mp4" />
+        <!-- set camera fps to (video files not affected) -->
+        <arg name="set_camera_fps" value="30"/>
+        <!-- set buffer queue size of frame capturing to -->
+        <arg name="buffer_queue_size" value="1000" />
+        <!-- throttling the querying of frames to -->
+        <arg name="fps" value="30" />
+        <!-- setting frame_id -->
+        <arg name="frame_id" value="videofile_frame" />
+        <!-- camera info loading, take care as it needs the "file:///" at the start , e.g.:
+        "file:///$(find your_camera_package)/config/your_camera.yaml" -->
+        <arg name="camera_info_url" value="" />
+        <!-- flip the image horizontally (mirror it) -->
+        <arg name="flip_horizontal" value="false" />
+        <!-- flip the image vertically -->
+        <arg name="flip_vertical" value="false" />
+        <!-- enable looping playback -->
+        <arg name="loop_videofile" value="false" />
+        <!-- visualize on an image_view window the stream generated -->
+        <arg name="visualize" value="false" />
+    </include>
+    <include file="$(find video_stream_opencv)/launch/camera.launch" >
+        <!-- node name and ros graph name -->
+        <arg name="camera_name" value="right" />
+        <!-- full path to the video file -->
+        <!-- wget http://techslides.com/demos/sample-videos/small.mp4 -O /tmp/small.mp4 -->
+        <arg name="video_stream_provider" value="/mnt/d/Unity/robomani_test/Recordings/right.mp4" />
+        <!-- set camera fps to (video files not affected) -->
+        <arg name="set_camera_fps" value="30"/>
+        <!-- set buffer queue size of frame capturing to -->
+        <arg name="buffer_queue_size" value="1000" />
+        <!-- throttling the querying of frames to -->
+        <arg name="fps" value="30" />
+        <!-- setting frame_id -->
+        <arg name="frame_id" value="videofile_frame" />
+        <!-- camera info loading, take care as it needs the "file:///" at the start , e.g.:
+        "file:///$(find your_camera_package)/config/your_camera.yaml" -->
+        <arg name="camera_info_url" value="" />
+        <!-- flip the image horizontally (mirror it) -->
+        <arg name="flip_horizontal" value="false" />
+        <!-- flip the image vertically -->
+        <arg name="flip_vertical" value="false" />
+        <!-- enable looping playback -->
+        <arg name="loop_videofile" value="false" />
+        <!-- visualize on an image_view window the stream generated -->
+        <arg name="visualize" value="false" />
+    </include>
+    <node name="orb_slam2" pkg="orb_slam2_ros" type="orb_slam2_ros_stereo" output="screen">
+
+        <remap from="/image_right/image_color_rect" to="/right/image_raw" />
+        <remap from="/image_left/image_color_rect" to="/left/image_raw" />
+        <param name="publish_pointcloud" type="bool" value="true" />
+        <param name="publish_pose" type="bool" value="true" />
+        <param name="localize_only" type="bool" value="false" />
+        <param name="reset_map" type="bool" value="false" />
+
+        <!-- static parameters -->
+        <param name="load_map" type="bool" value="false" />
+        <param name="map_file" type="string" value="map.bin" />
+        <param name="settings_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/config/custom_stereo.yaml" />
+        <param name="voc_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt" />
+
+        <param name="pointcloud_frame_id" type="string" value="map" />
+        <param name="camera_frame_id" type="string" value="camera_link" />
+        <param name="min_num_kf_in_map" type="int" value="5" />
+    </node>
+    <node name="making_map" pkg="robomani" type="making_map" output="screen" >
+        <param name="cameraHeight" value="0.25" />
+        <param name="floorRange" value="0.03"/>
+    </node>
+</launch>

@@ -24,6 +24,9 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -219,3 +222,7 @@ include_directories(
 add_executable(making_map src/making_map.cpp)
 target_link_libraries(making_map ${catkin_LIBRARIES})
 target_link_libraries(making_map ${PCL_LIBRARIES})
+add_executable(processing_map src/processing_map.cpp)
+target_link_libraries(processing_map ${catkin_LIBRARIES})
+target_link_libraries(processing_map ${PCL_LIBRARIES})
+target_link_libraries(processing_map ${OpenCV_LIBS} )
