@@ -4,9 +4,9 @@
         <arg name="camera_name" value="left" />
         <!-- full path to the video file -->
         <!-- wget http://techslides.com/demos/sample-videos/small.mp4 -O /tmp/small.mp4 -->
-        <arg name="video_stream_provider" value="/mnt/d/Unity/robomani_test/Recordings/left.mp4" />
+        <arg name="video_stream_provider" value="/home/nakano-lab/robomani/left021.mp4" />
         <!-- set camera fps to (video files not affected) -->
-        <arg name="set_camera_fps" value="30"/>
+        <!-- <arg name="set_camera_fps" value="20"/> -->
         <!-- set buffer queue size of frame capturing to -->
         <arg name="buffer_queue_size" value="1000" />
         <!-- throttling the querying of frames to -->
@@ -30,9 +30,9 @@
         <arg name="camera_name" value="right" />
         <!-- full path to the video file -->
         <!-- wget http://techslides.com/demos/sample-videos/small.mp4 -O /tmp/small.mp4 -->
-        <arg name="video_stream_provider" value="/mnt/d/Unity/robomani_test/Recordings/right.mp4" />
+        <arg name="video_stream_provider" value="/home/nakano-lab/robomani/right021.mp4" />
         <!-- set camera fps to (video files not affected) -->
-        <arg name="set_camera_fps" value="30"/>
+        <!-- <arg name="set_camera_fps" value="20"/> -->
         <!-- set buffer queue size of frame capturing to -->
         <arg name="buffer_queue_size" value="1000" />
         <!-- throttling the querying of frames to -->
@@ -63,7 +63,7 @@
         <!-- static parameters -->
         <param name="load_map" type="bool" value="false" />
         <param name="map_file" type="string" value="map.bin" />
-        <param name="settings_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/config/custom_stereo.yaml" />
+        <param name="settings_file" type="string" value="$(find robomani)/slam_config/custom_stereo.yaml" />
         <param name="voc_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt" />
 
         <param name="pointcloud_frame_id" type="string" value="map" />
@@ -71,7 +71,7 @@
         <param name="min_num_kf_in_map" type="int" value="5" />
     </node>
     <node name="making_map" pkg="robomani" type="making_map" output="screen" >
-        <param name="cameraHeight" value="0.25" />
-        <param name="floorRange" value="0.03"/>
+        <param name="saveDir" value="/home/nakano-lab/robomani/" />
+        <param name="cap" type="bool" value="true" />
     </node>
 </launch>

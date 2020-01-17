@@ -6,39 +6,14 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/common/common.h>
-// #include <pcl/ModelCoefficients.h>
-// #include <pcl/filters/extract_indices.h>
-// #include <pcl/sample_consensus/method_types.h>
-// #include <pcl/sample_consensus/model_types.h>
-// #include <pcl/segmentation/sac_segmentation.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-// pcl::PointCloud<pcl::PointXYZ>::Ptr planeExtract(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, double threshold){
-// 	//　平面検出（pclのチュートリアル通り）
-// 	pcl::SACSegmentation<pcl::PointXYZ> seg;
-// 	seg.setOptimizeCoefficients(true);
-// 	pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-// 	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-// 	seg.setInputCloud(cloud);
-// 	seg.setModelType(pcl::SACMODEL_PLANE); //モデル
-// 	seg.setMethodType(pcl::SAC_RANSAC);	//検出手法
-// 	seg.setMaxIterations(200);
-// 	seg.setDistanceThreshold(threshold); //閾値
-// 	seg.segment(*inliers, *coefficients);
-//
-// 	// extract points on the detected plane
-// 	pcl::ExtractIndices<pcl::PointXYZ> extract;
-// 	extract.setInputCloud(cloud);
-// 	extract.setIndices(inliers);
-// 	pcl::PointCloud<pcl::PointXYZ>::Ptr result(new pcl::PointCloud<pcl::PointXYZ>);
-// 	extract.filter(*result);
-//
-// 	return result;
-// }
 
 int main (int argc, char** argv){
     // Initialize ROS
@@ -58,11 +33,13 @@ int main (int argc, char** argv){
     float unitRange = 8.0;
     int wallCompNum = 4;
     int floorCompNum = 8;
+    int startNum = 31;
+	int goalNum = 63;
+    std::string saveDir = "/home/nakano-lab/robomani/";
     std::string mapPath = "/mnt/d/map.pcd";
     pn.getParam("floorUnder", floorUnder);
     pn.getParam("floorUpper", floorUpper);
     pn.getParam("wallUpper", wallUpper);
-	// pn.getParam("threshold", threshold);
     pn.getParam("xRangeMax", xRangeMax);
     pn.getParam("yRangeMin", yRangeMin);
     pn.getParam("mapCols", mapCols);
@@ -73,6 +50,9 @@ int main (int argc, char** argv){
     pn.getParam("unitRange", unitRange);
     pn.getParam("wallCompNum", wallCompNum);
     pn.getParam("floorCompNum", floorCompNum);
+    pn.getParam("saveDir", saveDir);
+    pn.getParam("startNum", startNum);
+	pn.getParam("goalNum", goalNum);
 
     // Initialize openCV valiable
     cv::Mat mapImage(mapCols, mapRows, CV_MAKETYPE(CV_8U, 1));
@@ -134,12 +114,22 @@ int main (int argc, char** argv){
     floorDetectFilter.setFilterFieldName ("z");
     floorDetectFilter.setFilterLimits (floorUnder, floorUpper);
     floorDetectFilter.filter (*floorCloud);
-	// floorCloud = planeExtract(intermidCloud, threshold);
 
     pcl::PointXYZ minPt, maxPt;
     pcl::getMinMax3D (*floorCloud, minPt, maxPt);
     ROS_INFO("minY:%f", minPt.y);
     ROS_INFO("maxX:%f", maxPt.x);
+
+    std::ofstream ofs(saveDir+"param.txt");
+    ofs << std::to_string(mapCols) << std::endl;
+    ofs << std::to_string(mapRows) << std::endl;
+    ofs << std::to_string(unitRange) << std::endl;
+    ofs << std::to_string(x0) << std::endl;
+    ofs << std::to_string(y0) << std::endl;
+    ofs << std::to_string(minPt.y) << std::endl;
+    ofs << std::to_string(maxPt.x) << std::endl;
+    ofs.close();
+
     // convert to openCV image
     for(int i=0; i<floorCloud->points.size(); i++){
 		pcl::PointXYZ &point = floorCloud->points[i];
@@ -172,7 +162,35 @@ int main (int argc, char** argv){
         else if(y<0)y=0;
         mapImage.data[y * mapImage.step + x * mapImage.elemSize()] = 0;
     }
-    cv::imwrite("/mnt/d/map.jpg", mapImage);// openCV visualizing
+    // load track file
+    ifstream ifs(saveDir+"track.txt");
+    std::string line;
+    std::vector<float> vec, trackX, trackY;
+    while(std::getline(ifs, line)){
+        std::istringstream stream(line);
+        std::string str;
+        while(std::getline(stream, str, ',')) vec.push_back(std::stof(str));
+    }
+    for(int i=0; i<vec.size(); i++){
+        if(i%2==0)trackX.push_back(vec.at(i));
+        else trackY.push_back(vec.at(i));
+    }
+    ifs.close();
+    for(int i=0; i<trackX.size(); i++){
+        int x = std::round(((mapCols-unitRange-x0-1)/minPt.y)*trackY.at(i) + x0);
+        int y = std::round(((mapRows-y0-1)/maxPt.x)*trackX.at(i) + y0);
+        if(x<mapCols&&y<mapRows)mapImage.data[y * mapImage.step + x * mapImage.elemSize()] = 255;
+        if(x+1<mapCols&&y<mapRows)mapImage.data[y * mapImage.step + (x+1) * mapImage.elemSize()] = 255;
+        if(x<mapCols&&y+1<mapRows)mapImage.data[(y+1) * mapImage.step + x * mapImage.elemSize()] = 255;
+        if(x-1<mapCols&&y<mapRows)mapImage.data[y * mapImage.step + (x-1) * mapImage.elemSize()] = 255;
+        if(x<mapCols&&y-1<mapRows)mapImage.data[(y-1) * mapImage.step + x * mapImage.elemSize()] = 255;
+        if(x+1<mapCols&&y+1<mapRows)mapImage.data[(y+1) * mapImage.step + (x+1) * mapImage.elemSize()] = 255;
+        if(x-1<mapCols&&y+1<mapRows)mapImage.data[(y+1) * mapImage.step + (x-1) * mapImage.elemSize()] = 255;
+        if(x+1<mapCols&&y-1<mapRows)mapImage.data[(y-1) * mapImage.step + (x+1) * mapImage.elemSize()] = 255;
+        if(x-1<mapCols&&y-1<mapRows)mapImage.data[(y-1) * mapImage.step + (x-1) * mapImage.elemSize()] = 255;
+        ROS_INFO("unko");
+    }
+    cv::imwrite(saveDir+"map.jpg", mapImage);// openCV visualizing
 
     // complement walls
     bool needComp = false;
@@ -213,7 +231,7 @@ int main (int argc, char** argv){
             }
         }
     }
-    cv::imwrite("/mnt/d/map_wall_comp.jpg", mapImage);
+    cv::imwrite(saveDir+"map_wall_comp.jpg", mapImage);
     // complement floor
 	keepLoop = true;
 	while(keepLoop){
@@ -278,7 +296,7 @@ int main (int argc, char** argv){
 	        }
 	    }
 	}
-    cv::imwrite("/mnt/d/map_wall_floor_comp.jpg", mapImage);
+    cv::imwrite(saveDir+"map_wall_floor_comp.jpg", mapImage);
 	// complement wall 2
 	keepLoop = false;
 	for(int x=0; x<mapCols-unitRange*1.5; x++){
@@ -314,7 +332,21 @@ int main (int argc, char** argv){
 			}
 		}
 	}
-	cv::imwrite("/mnt/d/map_wall_floor_wall_comp.jpg", mapImage);
+	cv::imwrite(saveDir+"map_wall_floor_wall_comp.jpg", mapImage);
+
+    // final complement and make start and goal
+    for(int x=0; x<mapCols; x++){
+        for(int y=0; y<mapRows; y++){
+            if(mapImage.data[ y * mapImage.step + x * mapImage.elemSize()]==127)mapImage.data[ y * mapImage.step + x * mapImage.elemSize()]=0;
+        }
+    }
+    int startX = std::round(x0);
+    int startY = std::round(y0);
+    int goalX = std::round(((mapCols-unitRange-x0-1)/minPt.y)*trackY.at(trackY.size()-1) + x0);
+    int goalY = std::round(((mapRows-y0-1)/maxPt.x)*trackX.at(trackX.size()-1)  + y0);
+    mapImage.data[ startY * mapImage.step + startX * mapImage.elemSize()] = startNum;
+    mapImage.data[ goalY * mapImage.step + goalX * mapImage.elemSize()] = goalNum;
+    cv::imwrite(saveDir+"map_comp.png", mapImage);
 
     // pcl visualizing
     viewer.removeAllPointClouds();

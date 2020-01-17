@@ -1,17 +1,19 @@
 <launch>
     <node name="processing_map" pkg="robomani" type="processing_map" output="screen" >
         <param name="floorUnder" value="-10" />
-        <param name="floorUpper" value="-1.5" />
-        <param name="wallUpper" value="1.5" />
+        <param name="floorUpper" value="-3.5" />
+        <param name="wallUpper" value="0" />
         <param name="xRangeMax" value="140" />
         <param name="yRangeMin" value="-140" />
         <param name="mapCols" value="128" />
         <param name="mapRows" value="128" />
-        <param name="mapPath" value="/mnt/d/map.pcd" />
+        <param name="mapPath" value="/home/nakano-lab/robomani/map_very_good.pcd" />
         <param name="x0" value="12.13649" />
         <param name="y0" value="1.3" />
         <param name="unitRange" value="8.0" />
-        <param name="wallCompNum" value="2" />
+        <param name="wallCompNum" value="1" />
         <param name="floorCompNum" value="6" />
+        <param name="startNum" value="31" />
+        <param name="goalNum" value="63" />
     </node>
 </launch>

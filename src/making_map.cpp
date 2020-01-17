@@ -9,6 +9,9 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/io/pcd_io.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
 
 #define SPHERE_RAD 0.1
 #define ARROW_SCALE 1.0
@@ -24,6 +27,7 @@ tf::Vector3 UNIT_VECTOR_X(1,0,0);
 tf::Vector3 UNIT_VECTOR_Z(0,0,1);
 tf::Vector3 tfCameraArrowPt(0,0,0);
 pcl::PointXYZ pclCameraArrowPt(0,0,0);
+std::vector<float> trackX, trackY;
 
 pcl::PointXYZ tfVectorToPCL(tf::Vector3 tfVec){
     pcl::PointXYZ output;
@@ -49,6 +53,8 @@ void pose_cb (const geometry_msgs::PoseStamped& msg){
     pclCameraArrowPt = tfVectorToPCL(tfCameraArrowPt);
     cameraViewDir = (1/ARROW_SCALE) * (tfCameraArrowPt - cameraTf.getOrigin());
     cameraUpDir = cameraTf * UNIT_VECTOR_Z - cameraTf.getOrigin();
+    trackX.push_back(cameraPt.x);
+    trackY.push_back(cameraPt.y);
 }
 
 int main (int argc, char** argv){
@@ -56,10 +62,10 @@ int main (int argc, char** argv){
     ros::init (argc, argv, "making_map");
     ros::NodeHandle nh;
     ros::NodeHandle pn("~");
-    float cameraHeight = 0.2;
-    float floorRange = 0.01;
-    pn.getParam("cameraHeight",cameraHeight);
-    pn.getParam("floorRange",floorRange);
+    std::string saveDir = "/home/nakano-lab/robomani/";
+    bool cap = false;
+    pn.getParam("saveDir",saveDir);
+    pn.getParam("cap", cap );
     // make instance of PCL viewer
     pcl::visualization::PCLVisualizer viewer("PointCloudViewer");
 
@@ -73,7 +79,9 @@ int main (int argc, char** argv){
     viewer.addSphere(cameraPt, SPHERE_RAD, 0, 1, 0);
     viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2);
     viewer.addCoordinateSystem(0.1);
-    viewer.setCameraPosition(64,-64,20,64,-64,0,1,0,0);
+    viewer.setCameraPosition(64,-64,300,64,-64,0,1,0,0);
+    // viewer.setFullScreen(cap);
+    int fCount = 0;
     viewer.spinOnce();
 
     ros::Rate r(10); // 10 hz
@@ -83,12 +91,21 @@ int main (int argc, char** argv){
         viewer.addArrow(pclCameraArrowPt, cameraPt, 0, 1, 0, false);
         viewer.updatePointCloud(cloud);
         viewer.updateSphere(cameraPt, SPHERE_RAD, 0, 1, 0);
+        if(cap||fCount%10==0){
+            std::string screenShotPath = saveDir + "cap/" + std::to_string(fCount) + ".png";
+            viewer.saveScreenshot(screenShotPath);
+            fCount++;
+        }
 	    viewer.spinOnce();
         r.sleep();
         if(viewer.wasStopped())break;
     }
     ros::spinOnce();
-    pcl::io::savePCDFileASCII ("/mnt/d/map.pcd" , *cloud);
+    pcl::io::savePCDFileASCII (saveDir+"map.pcd" , *cloud);
+    std::ofstream ofs(saveDir+"track.txt");
+    for(int i=0; i<trackX.size(); i++) ofs << std::to_string(trackX.at(i)) << "," << std::to_string(trackY.at(i)) << std::endl;
+    ofs.close();
+
     while(ros::ok()){
         ros::spinOnce();
         r.sleep();

@@ -1,0 +1,4 @@
+<launch>
+    <node name="maze" pkg="robomani" type="maze" output="screen" >
+    </node>
+</launch>
